@@ -1,17 +1,22 @@
-# Django Chatbot
+# jisrBot
+A chatbot using openAI and uploads documents to the knowledge base
 
-![Django Chatbot](./chatbot.jpg)
+To use this repo follow the rules below:
 
-## An interactive chatbot built with Django.
+Clone:
 
-Subscribe to [Tommy's Codebase](https://www.youtube.com/@tommys_codebase) on YouTube for more projects like this.
+git clone https://github.com/nawawy/jisrBot
 
-Link to YouTube Video: [🔥🚀Build your own ChatGPT!](https://youtu.be/cxWebdREQIk)
+Go to the folder of the repo:
 
-Learn How to Build an Interactive Chat Bot with Django! 💬✨
-In this step-by-step tutorial, discover how to create a powerful chatbot with awesome features:
+cd django_chatbot-main
 
-- ✅ Save your chats and resume conversations later
-- ✅ Stunning User Interface (UI) design
-- ✅ User-friendly Authentication and Registration
-- 🚀 Dive into the world of chatbots and level up your Django skills! Watch now! 🔥
+Build the docker container:
+
+docker build -t jisr_app 
+docker run --name jisr_bot_c1 -p 8000:8000 -d jisr_app
+docker exec -it jisr_bot_c1 python manage.py migrate
+
+Now go to http://127.0.0.1:8000/
+
+
