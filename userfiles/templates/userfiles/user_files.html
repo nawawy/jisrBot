@@ -1,0 +1,7 @@
+<h1>Files Uploading</h1>
+<ul>
+  {% for file in object_list %}
+    <h2>{{ file.title }}</h2>
+    <img src="{{ file.file_data}}" alt="{{ file.title }}">
+  {% endfor %}
+</ul>
