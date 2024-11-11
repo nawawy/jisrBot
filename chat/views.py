@@ -24,7 +24,7 @@ import glob
 session_titles = []
 chats = []
 
-my_sk = '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'
+my_sk = ''
 client = OpenAI(api_key=my_sk)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
