@@ -21,48 +21,93 @@ from os.path import isfile, join
 from pathlib import Path
 import glob
 
+from langchain_community.document_loaders import PyPDFLoader
+from langchain.document_loaders import TextLoader
+from langchain.text_splitter import CharacterTextSplitter
+from langchain_openai import OpenAIEmbeddings
+from langchain_community.vectorstores import FAISS
+from langchain.memory import ConversationBufferMemory
+from langchain.chains import ConversationalRetrievalChain
+from langchain_openai import ChatOpenAI
+
 session_titles = []
 chats = []
 
 my_sk = ''
-client = OpenAI(api_key=my_sk)
+os.environ["OPENAI_API_KEY"] = my_sk
+# client = OpenAI(api_key=my_sk)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 mypath = str(BASE_DIR)+'/media/documents'
+
+
+def load_rag_files(mypath):
+    loaders = [PyPDFLoader(os.path.join(mypath, fn)) for fn in os.listdir(mypath)]
+    all_documents = []
+
+    for loader in loaders:
+        print("Loading raw document..." + loader.file_path)
+        raw_documents = loader.load()
+
+        print("Splitting text...")
+        text_splitter = CharacterTextSplitter(
+            separator="\n\n",
+            chunk_size=800,
+            chunk_overlap=100,
+            length_function=len,
+        )
+        documents = text_splitter.split_documents(raw_documents)
+        all_documents.extend(documents)
+        
+
+    embeddings = OpenAIEmbeddings()
+    vectorstore = FAISS.from_documents(all_documents, embedding=embeddings)
+
+    return vectorstore
+    
 
 # Reading files to add to knowledge base (RAG)
 files = []
 for file in glob.glob(mypath + "/*.pdf"):
     files.append(file)
 
-files_to_add = []
-for f in files:
+# files_to_add = []
+# for f in files:
 
-    file = client.files.create(
-    file=open(f, "rb"),
-    purpose="assistants"
-    )
+#     file = client.files.create(
+#     file=open(f, "rb"),
+#     purpose="assistants"
+#     )
 
-    files_to_add.append(file.id)
+#     files_to_add.append(file.id)
 
 
-intstructions_string = "JisrBot, functioning as a virtual assistat \
-, communicates in clear, accessible language, escalating \
-to technical depth upon request. \
-It reacts to feedback aptly and concludes with its signature '–JisrBot'. \
-JisrBot will tailor the length of its responses to match the viewer's input, \
-providing concise acknowledgments to brief expressions of gratitude or \
-feedback, thus keeping the interaction natural and engaging."
-
-assistant = client.beta.assistants.create(
-    name="JisrBot",
-    description="Virtual Assistant",
-    instructions=intstructions_string,
-    tools=[{"type": "file_search"}],
-    tool_resources={ "code_interpreter": {"file_ids": files_to_add}},
-    model="gpt-3.5-turbo"
+vectorstore = load_rag_files(mypath)
+llm = ChatOpenAI(temperature=0.7, model_name="gpt-4")
+memory = ConversationBufferMemory(memory_key='chat_history', return_messages=True)
+conversation_chain = ConversationalRetrievalChain.from_llm(
+    llm=llm,
+    chain_type="stuff",
+    retriever=vectorstore.as_retriever(),
+    memory=memory
 )
+# intstructions_string = "JisrBot, functioning as a virtual assistat \
+# , communicates in clear, accessible language, escalating \
+# to technical depth upon request. \
+# It reacts to feedback aptly and concludes with its signature '–JisrBot'. \
+# JisrBot will tailor the length of its responses to match the viewer's input, \
+# providing concise acknowledgments to brief expressions of gratitude or \
+# feedback, thus keeping the interaction natural and engaging."
+
+# assistant = client.beta.assistants.create(
+#     name="JisrBot",
+#     description="Virtual Assistant",
+#     instructions=intstructions_string,
+#     tools=[{"type": "file_search"}],
+#     tool_resources={ "code_interpreter": {"file_ids": files_to_add}},
+#     model="gpt-3.5-turbo"
+# )
 
 def generate_uuid():
     return str(uuid.uuid4())
@@ -122,6 +167,17 @@ def user_logout(request):
 
 @login_required(login_url='home')
 def chatbot(request):
+    global conversation_chain
+    vectorstore = load_rag_files(mypath)
+    llm = ChatOpenAI(temperature=0.7, model_name="gpt-4")
+    memory = ConversationBufferMemory(memory_key='chat_history', return_messages=True)
+    conversation_chain = ConversationalRetrievalChain.from_llm(
+        llm=llm,
+        chain_type="stuff",
+        retriever=vectorstore.as_retriever(),
+        memory=memory
+    )
+    
     return render(request, 'index.html')
 
 def wait_for_assistant(thread, run):
@@ -149,36 +205,45 @@ def wait_for_assistant(thread, run):
 
 def generate_chatbot_response(user_message):
 
-    # create thread (i.e. object that handles conversation between user and assistant)
-    thread = client.beta.threads.create()
+    # # create thread (i.e. object that handles conversation between user and assistant)
+    # thread = client.beta.threads.create()
 
-    # add a user message to the thread
-    message = client.beta.threads.messages.create(
-        thread_id=thread.id,
-        role="user",
-        content=user_message
-    )
+    # # add a user message to the thread
+    # message = client.beta.threads.messages.create(
+    #     thread_id=thread.id,
+    #     role="user",
+    #     content=user_message
+    # )
 
-    # send message to assistant to generate a response
-    run = client.beta.threads.runs.create(
-    thread_id=thread.id,
-    assistant_id=assistant.id,
-    )
+    # # send message to assistant to generate a response
+    # run = client.beta.threads.runs.create(
+    # thread_id=thread.id,
+    # assistant_id=assistant.id,
+    # )
 
-    # wait for assistant process prompt
-    run = wait_for_assistant(thread, run)
+    # # wait for assistant process prompt
+    # run = wait_for_assistant(thread, run)
 
-    # view messages added to thread
-    messages = client.beta.threads.messages.list(
-    thread_id=thread.id
-    )
+    # # view messages added to thread
+    # messages = client.beta.threads.messages.list(
+    # thread_id=thread.id
+    # )
 
-    return messages.data[0].content[0].text.value
+    # return messages.data[0].content[0].text.value
+
+    # conversation_chain = conv
+    global conversation_chain
+    query = user_message
+    result = conversation_chain({"question": query})
+    answer = result["answer"]
+
+    return answer
 
 
 def get_chatbot_response(request):
     if request.method == 'POST':
         user_message = request.POST.get('message')
+        # conv = request.session.get('conv')
         session_titles.append(user_message)
         # chatbot_response = f'Reply from backend.\nMessage was received successfully'
         chatbot_response = generate_chatbot_response(user_message)

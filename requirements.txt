@@ -2,3 +2,9 @@ Django==4.1.2
 openai
 pathlib
 djangorestframework
+langchain
+tiktoken
+faiss-cpu
+langchain_experimental
+pypdf
+langchain-openai
