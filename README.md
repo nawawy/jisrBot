@@ -18,6 +18,5 @@ docker run --name jisr_bot_c1 -p 8000:8000 -d jisr_app
 docker exec -it jisr_bot_c1 python manage.py migrate
 
 Now go to http://127.0.0.1:8000/
->>>>>>> 9d10a6a103ada156dd81563a3fbc844e1a3178ba
 
 
